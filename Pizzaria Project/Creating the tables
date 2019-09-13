@@ -1,0 +1,207 @@
+create schema pizzaria;
+set search_path to pizzaria;
+
+create table Pessoa(
+    CPF varchar(15),
+    Data_Nasc date,
+    Nome varchar(50),
+    Endereco varchar(50),
+    Constraint PessoaPK primary key(CPF)
+);
+
+create table Dono_De_Negocio(    
+    CPF varchar(15),
+    LinkedIn varchar(30),
+    Constraint DonoPK primary key(CPF),
+    Constraint DonoFK foreign key (CPF)
+        References Pessoa 
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+create table Consumidor_Faminto(
+    CPF varchar(15),
+    Endereco_Entrega varchar(50),
+    Constraint ConsumidorPK primary key (CPF),
+    Constraint ConsumidorFK foreign key (CPF)
+        References Pessoa(CPF)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+create table Animador(
+    CPF varchar(15),
+    Nome_Artistico varchar(50),
+    Biografia varchar(500),
+    Preco float,
+    Constraint AnimadorPK primary key (CPF),
+    Constraint AnimadorfK foreign key (CPF)    
+        References Pessoa(CPF)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+create table Pedido_Normal(
+    Ident varchar(10),
+    CPF_Consumidor varchar(15),
+    Hora time,
+    Data_ date,
+    Hora_entrega time,
+    Qtd_Pessoas smallint,
+    Custo_Total float,
+    Constraint Pedido_NormalPK primary key (ident),
+    Constraint Pedido_NormalFK foreign key (CPF_Consumidor)
+        References Consumidor_Faminto(CPF)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+create table Pedido_Especial(
+    Ident varchar(15),
+    CPF_Animador varchar(15),
+    Duracao varchar(10),
+    Tipo varchar(30),
+    Constraint EspecialPK primary key (Ident),
+    
+    Constraint EspecialFK1 foreign key (Ident)
+        REFERENCES PEDIDO_NORMAL(Ident)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+        foreign key (CPF_Animador)
+        References Animador(CPF)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+
+create table Pizzaria(
+    Nome varchar(20),
+    CPF_Dono varchar(15),
+    CEP varchar(15),
+    Site varchar(50),
+    Fone varchar(15),
+    Endereco varchar(50),
+    Hora_Abertura time,
+    Hora_Fechamento time,
+    Constraint PizzariaPK primary key (Nome),
+    Constraint PizzariaFK foreign key (CPF_Dono)
+        References Dono_De_Negocio(CPF)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+
+create table Acompanhamento(
+    Cod varchar(5),
+    Nome_PIZZARIA varchar(20),
+    NomeAcompanhamento varchar(20),
+    Tipo varchar(10),
+    Preco float,
+    Descricao varchar(50),
+    Constraint AcompanhaPK primary key (Cod,Nome_PIZZARIA),
+    Constraint AcompanhaFK foreign key (Nome_PIZZARIA)
+        References Pizzaria(Nome)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+create table Contratacao(
+    Nome varchar(50),
+    CPF varchar(15),
+    Dispo varchar(15),
+    Constraint ContrataPK primary key (Nome,CPF),
+    Constraint ContrataFK1 foreign key (Nome)
+        References Pizzaria (Nome)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    foreign key (CPF)
+        References Animador (CPF)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+CREATE TABLE CATEGORIA(
+    COD VARCHAR(20),
+    DESCRICAO VARCHAR(50),
+    COD_SUPER VARCHAR(20),
+    CONSTRAINT CATEGPK PRIMARY KEY (COD),
+    CONSTRAINT CATEGFK FOREIGN KEY (COD_SUPER)
+        REFERENCES CATEGORIA (COD)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+create table PIZZA(
+    Nome_pizza varchar(20),
+    Nome varchar(20),
+    COD varchar(20),
+    preco float,
+    CONSTRAINT PIZZAPK PRIMARY KEY (NOME_PIZZA,NOME),
+    CONSTRAINT PIZZAFK FOREIGN KEY (NOME)
+        REFERENCES PIZZARIA (NOME)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    FOREIGN KEY (COD)
+        REFERENCES CATEGORIA (COD)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+
+CREATE TABLE INGREDIENTE_EXTRA(
+    COD VARCHAR(20),
+    NOME VARCHAR(20),
+    PRECO FLOAT,
+    CONSTRAINT INGEXPK PRIMARY KEY (COD)
+);
+
+create table Pizza_Pedido(
+    Ident varchar(15),
+    Nome_Pizza varchar(20),
+    Nome varchar(20),
+    Massa varchar(20),
+    Borda varchar(20),
+    Molho varchar(20),
+    Constraint Pizzape_PK primary key (Ident, Nome_Pizza, Nome),
+    Constraint Pizzape_FK1 foreign key (Nome_Pizza, Nome)
+        References Pizza(Nome_Pizza, Nome)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    foreign key (Ident)
+        References Pedido_NORMAL(Ident)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+CREATE TABLE EXTRA_PEDIDO(
+    IDENT VARCHAR(15),
+    NOME_PIZZA VARCHAR(20),
+    NOME VARCHAR(20),
+    COD VARCHAR(20),
+    CONSTRAINT EXTRAPEPK PRIMARY KEY (IDENT,NOME_PIZZA,NOME,COD),
+    CONSTRAINT EXTRAPEFK1 FOREIGN KEY (IDENT,NOME_PIZZA,NOME)
+        REFERENCES PIZZA_PEDIDO (IDENT,NOME_PIZZA,NOME)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    FOREIGN KEY (COD)
+        REFERENCES INGREDIENTE_EXTRA(COD)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+CREATE TABLE PEDIDO_ACOMPANHAMENTO(
+    IDENT VARCHAR(20),
+    COD VARCHAR(20),
+    NOME_ACOMP VARCHAR(20),
+    NOME_PIZZARIA VARCHAR(20),
+    QUANT INTEGER,
+    CONSTRAINT PEACOMPPK PRIMARY KEY (IDENT,COD,NOME_PIZZARIA),
+    CONSTRAINT PEACOMPFK1 FOREIGN KEY (COD,NOME_PIZZARIA)
+        REFERENCES ACOMPANHAMENTO (COD,NOME_PIZZARIA)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    FOREIGN KEY (Ident)
+        REFERENCES PEDIDO_NORMAL(Ident)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
