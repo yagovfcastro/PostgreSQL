@@ -1,0 +1,132 @@
+Consulta 1 - O nome dos três usuários que mais gastam na plataforma: disponibiliza os nomes das pessoas que são mais “fiéis” ao APP, podendo ajudar o gerente a tomar alguma decisão de inserir vantagens para esses clientes fiéis do APP.
+
+SELECT PESSOA.NOME
+FROM PESSOA, (SELECT SUM(PEDIDO_NORMAL.CUSTO_TOTAL), PEDIDO_NORMAL.CPF_CONSUMIDOR
+                   FROM PIZZA INNER JOIN (PIZZA_PEDIDO INNER JOIN PEDIDO_NORMAL       ON(PEDIDO_NORMAL.IDENT = PIZZA_PEDIDO.IDENT))
+        ON(PIZZA.NOME_PIZZA = PIZZA_PEDIDO.NOME_PIZZA)
+               GROUP BY  PEDIDO_NORMAL.CPF_CONSUMIDOR
+               ORDER BY SUM(PRECO) DESC
+               LIMIT 3) AS CONSULT
+WHERE PESSOA.CPF = CONSULT.CPF_CONSUMIDOR
+
+
+Consulta 2 - Média de preço das pizzas de cada pizzaria: ajudaria o gerente na tomada da decisão de seus preços, em relação à concorrência para que possa promover promoções ou um aumento no preço médio de suas pizzas.
+
+SELECT COALESCE(PIZZARIA.NOME, 'Todas as pizzarias') AS Pizzarias, 
+  AVG(PIZZA.PRECO) AS Medias_Pizzarias
+FROM PIZZA, PIZZARIA
+WHERE PIZZA.NOME = PIZZARIA.NOME
+GROUP BY
+        ROLLUP (PIZZARIA.NOME)  
+
+
+Consulta 3 - Mostra qual a pizzaria mais lucrativa por dono: ajudaria o gerente a ver qual a pizzaria que está dando mais lucro podendo decidir em qual deverá investir mais.
+
+SELECT DONO_DE_NEGOCIO.CPF,PIZZARIA.NOME,SUM(PEDIDO_NORMAL.CUSTO_TOTAL)
+FROM DONO_DE_NEGOCIO INNER JOIN  (PIZZARIA INNER JOIN (PIZZA_PEDIDO INNER JOIN PEDIDO_NORMAL 
+                                                       ON PIZZA_PEDIDO.IDENT = PEDIDO_NORMAL.IDENT) 
+                                  ON PIZZARIA.NOME = PIZZA_PEDIDO.NOME)
+    ON PIZZARIA.CPF_DONO = DONO_DE_NEGOCIO.CPF
+GROUP BY PIZZARIA.NOME, DONO_DE_NEGOCIO.CPF
+ORDER BY SUM(PEDIDO_NORMAL.CUSTO_TOTAL) DESC;
+
+
+Consulta 4 - Quanto cada pizzaria arrecadou no mês 06/2019: tem como intuito mostrar para o gerente de cada pizzaria qual foi o lucro total no mês de junho.
+
+SELECT SUM(PEDIDO_NORMAL.CUSTO_TOTAL),PIZZA.NOME
+FROM PIZZA INNER JOIN (PIZZA_PEDIDO INNER JOIN PEDIDO_NORMAL 
+ON PIZZA_PEDIDO.IDENT = PEDIDO_NORMAL.IDENT)
+      ON PIZZA_PEDIDO.NOME_PIZZA = PIZZA.NOME_PIZZA          
+WHERE PEDIDO_NORMAL.DATA_ >= '2019/07/01' AND 
+              PEDIDO_NORMAL.DATA_ <= '2019/07/31'
+GROUP BY PIZZA.NOME
+
+
+Consulta 5 - As três pizzas mais vendidas: dá um feedback ao gerente sobre quais as pizzas que, independente de tendências mensais, mais vendem, levando em conta todas as pizzas vendidas no banco de dados. 
+
+SELECT PIZZA.NOME_PIZZA,COUNT(PIZZA_PEDIDO.NOME_PIZZA)
+FROM PEDIDO_NORMAL INNER JOIN (PIZZA_PEDIDO INNER JOIN PIZZA
+                                                                    ON PIZZA.NOME_PIZZA = PIZZA_PEDIDO.NOME_PIZZA 
+                                                                            AND PIZZA.NOME = PIZZA_PEDIDO.NOME)
+                                                                             ON PIZZA_PEDIDO.IDENT = PEDIDO_NORMAL.IDENT
+GROUP BY PIZZA.NOME_PIZZA
+ORDER BY COUNT(PIZZA_PEDIDO.NOME_PIZZA) DESC
+LIMIT 3
+
+
+Consulta 6 - O animador que mais atendeu no mês atual: dá um feedback ao gerente sobre qual animador tentar disponibilizar por mais dias durante a semana, aumentar o preço ou até mesmo saber qual animador está mais apto a ser contratado.
+
+SELECT NOME_ARTISTICO
+FROM ANIMADOR INNER JOIN(PEDIDO_ESPECIAL INNER JOIN PEDIDO_NORMAL 
+                   ON PEDIDO_ESPECIAL.IDENT = PEDIDO_NORMAL.IDENT)
+                                    ON ANIMADOR.CPF = PEDIDO_ESPECIAL.CPF_ANIMADOR
+WHERE PEDIDO_NORMAL.DATA_ >= '2019/07/01' AND PEDIDO_NORMAL.DATA_ < '2019/08/01'
+GROUP BY NOME_ARTISTICO
+HAVING COUNT(NOME_ARTISTICO) >= ALL(SELECT COUNT(NOME_ARTISTICO)
+                                   FROM ANIMADOR INNER JOIN(PEDIDO_ESPECIAL INNER JOIN PEDIDO_NORMAL 
+                                                                                           ON PEDIDO_ESPECIAL.IDENT = PEDIDO_NORMAL.IDENT)                                                           ON ANIMADOR.CPF = PEDIDO_ESPECIAL.CPF_ANIMADOR
+                                  WHERE PEDIDO_NORMAL.DATA_ >= '2019/07/01' AND 
+     PEDIDO_NORMAL.DATA_ < '2019/08/01'
+                      GROUP BY NOME_ARTISTICO)
+
+
+Consulta 7 - Quanto cada pizzaria vendeu de pizzas durante o mês atual (julho): dá um feedback ao gerente sobre quais pizzarias competidoras estão vendendo mais pizzas no mês,  incentivando-o a procurar o por quê, ou, mostraria sua liderança nas vendas, incentivando-o a continuar sua estratégia de vendas.
+
+SELECT COUNT(PIZZA_PEDIDO.IDENT) AS Quantidade_Pizzas, 
+COALESCE(PIZZARIA.NOME, 'TODAS AS PIZZARIAS') AS PIZZARIAS
+FROM PIZZARIA INNER JOIN(PIZZA_PEDIDO INNER JOIN PEDIDO_NORMAL 
+        ON PIZZA_PEDIDO.IDENT = PEDIDO_NORMAL.IDENT)
+                             ON PIZZARIA.NOME = PIZZA_PEDIDO.NOME
+WHERE PEDIDO_NORMAL.DATA_ >= '2019/07/01' AND 
+              PEDIDO_NORMAL.DATA_ < '2019/08/01'
+GROUP BY ROLLUP(PIZZARIA.NOME)
+
+
+Consultas 8[a] e 8[b] - A consulta 8[a] traz como resultado o número de pessoas com idade entre 18 e 30 que pedem pedido especial. Enquanto a consulta 8[b] traz como resultado o número de pessoas com idade maior que 30: ambas as consultas ajudam o gerente a saber qual deve ser o público alvo de seus pedidos especiais.
+
+8[a]:
+SELECT COUNT(PESSOA.CPF)  AS QUANTIDADE
+FROM PESSOA INNER JOIN (PEDIDO_NORMAL INNER JOIN PEDIDO_ESPECIAL 
+ON PEDIDO_NORMAL.IDENT = PEDIDO_ESPECIAL.IDENT)
+                                 ON PESSOA.CPF = PEDIDO_NORMAL.CPF_CONSUMIDOR
+WHERE  PESSOA.DATA_NASC >= '1989/01/01' AND 
+               PESSOA.DATA_NASC < '2001/01/01'
+
+8[b]:
+SELECT COUNT(PESSOA.CPF) AS QUANTIDADE
+FROM PESSOA INNER JOIN (PEDIDO_NORMAL INNER JOIN PEDIDO_ESPECIAL 
+ON PEDIDO_NORMAL.IDENT = PEDIDO_ESPECIAL.IDENT)
+                                  ON PESSOA.CPF = PEDIDO_NORMAL.CPF_CONSUMIDOR
+WHERE PESSOA.DATA_NASC <= '1988/01/01'
+
+
+Consulta 9 - Qual a pizza mais vendida no mês atual (julho): dá um feedback ao gerente sobre qual a pizza em tendência no mês, para que possa produzir mais, fazer promoções ou até mesmo aumentar o preço da pizza.
+
+SELECT PIZZA.NOME, PIZZA.PRECO
+FROM PEDIDO_NORMAL INNER JOIN (PIZZA_PEDIDO INNER JOIN PIZZA 
+       ON PIZZA.NOME_PIZZA = PIZZA_PEDIDO.NOME_PIZZA 
+             AND PIZZA.NOME = PIZZA_PEDIDO.NOME)
+                                                            ON PIZZA_PEDIDO.IDENT = PEDIDO_NORMAL.IDENT
+WHERE CAST(PEDIDO_NORMAL.DATA_ AS VARCHAR) LIKE '2019-07-%'
+GROUP BY PIZZA.NOME_PIZZA, PIZZA.NOME
+HAVING COUNT(PIZZA_PEDIDO.NOME_PIZZA) >= ALL(SELECT COUNT(PIZZA.NOME_PIZZA)
+                   FROM PEDIDO_NORMAL INNER JOIN (PIZZA_PEDIDO INNER JOIN PIZZA 
+          ON PIZZA.NOME_PIZZA = PIZZA_PEDIDO.NOME_PIZZA                                                                             
+AND PIZZA.NOME = PIZZA_PEDIDO.NOME)
+                                                             ON PIZZA_PEDIDO.IDENT = PEDIDO_NORMAL.IDENT
+                                                                                  WHERE CAST(PEDIDO_NORMAL.DATA_ AS VARCHAR) LIKE '2019-07-%'
+                            GROUP BY PIZZA.NOME_PIZZA)
+
+
+
+
+Consulta 10 - O ingrediente extra mais vendido: dá um feedback ao gerente sobre qual ingrediente extra ele deva investir mais, aumentar o estoque ou até mesmo aumentar o preço. 
+
+SELECT INGREDIENTE_EXTRA.NOME, COUNT(INGREDIENTE_EXTRA.COD)
+FROM INGREDIENTE_EXTRA INNER JOIN EXTRA_PEDIDO 
+                             ON INGREDIENTE_EXTRA.COD = EXTRA_PEDIDO.COD
+GROUP BY INGREDIENTE_EXTRA.NOME
+HAVING COUNT(INGREDIENTE_EXTRA.COD)  >= ALL(SELECT COUNT(INGREDIENTE_EXTRA.COD)
+                                                          FROM INGREDIENTE_EXTRA INNER JOIN EXTRA_PEDIDO                              
+                                                         ON INGREDIENTE_EXTRA.COD = EXTRA_PEDIDO.COD
+                                                          GROUP BY INGREDIENTE_EXTRA.NOME)
