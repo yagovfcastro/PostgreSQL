@@ -1,0 +1,74 @@
+CREATE OR REPLACE FUNCTION validarCPF() RETURNS trigger AS $$
+DECLARE
+    cpfdado varchar(11);
+    temp1 real;
+    temp2 real; 
+    soma integer;
+    digito1 integer; 
+    digito2 integer;
+    tam integer;
+    index integer;
+    cpftemp varchar(11);
+
+BEGIN
+    cpfdado := new.CPF;
+
+    IF char_length(cpfdado) != 11
+    THEN
+        RAISE NOTICE 'Formato inválido: %', cpfdado;
+    END IF;
+
+    temp1 := 0;
+    soma := 0;
+    digito1 := 0;
+    digito2 := 0;
+    index := 0;
+    val_par_cpf := cpfdado;
+    tam := char_length(cpftemp);
+    temp1 := tam-1;
+
+    -- Cálculo do dígito 1
+    index :=1;
+    WHILE index <= (tam -2) 
+    LOOP
+        temp2 := CAST(substring(cpftemp from index for 1) AS NUMERIC);
+        soma := soma + ( temp2 * temp1);
+        temp1 := temp1 - 1;
+        index := index + 1;
+    END LOOP;
+
+    digito1 := 11 - CAST((soma % 11) AS INTEGER);
+
+    IF (digito1 = 10) THEN digito1 :=0 ; END IF;
+    IF (digito1 = 11) THEN digito1 :=0 ; END IF;
+
+    
+-- Cálculo do dígito 2
+    temp1 := 11; soma :=0;
+    index :=1;
+    WHILE index <= (tam -1) 
+    LOOP
+        soma := soma + CAST((substring(cpftemp FROM index FOR 1)) AS REAL) * temp1;
+        temp1 := temp1 - 1;
+        index := index + 1;
+    END LOOP;
+
+    digito2 := 11 - CAST ((soma % 11) AS INTEGER);
+
+    IF (digito2 = 10) THEN digito2 := 0; END IF;
+    IF (digito2 = 11) THEN digito2 := 0; END IF;
+
+    --Teste final
+    IF ( (digito1 || '' || digito2) = substring(cpftemp FROM tam-1 FOR 2) )
+        THEN RETURN NEW;
+    ELSE
+        RAISE EXCEPTION 'O CPF % é inválido',cpfdado;
+    END IF;
+
+END $$ language plpgsql;
+
+CREATE TRIGGER CPFVALIDO
+BEFORE INSERT OR UPDATE OF CPF ON PESSOA
+FOR EACH ROW
+EXECUTE PROCEDURE validarCPF();
+
